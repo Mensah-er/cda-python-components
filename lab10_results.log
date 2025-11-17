@@ -1,0 +1,38 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.1, pluggy-1.6.0 -- /home/ernest/piot/cda-python-components/piot-venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/ernest/piot/cda-python-components
+collecting ... collected 4 items
+
+tests/integration/connection/test_MqttClientPerformance.py::TestMqttClientPerformance::testConnectAndDisconnect 
+-------------------------------- live log call ---------------------------------
+INFO     programmingtheiot.cda.connection.MqttClientConnector:MqttClientConnector.py:101 Disconnected from broker, rc=0
+INFO     root:test_MqttClientPerformance.py:38 Connect and Disconnect: 7.93 ms
+PASSED                                                                   [ 25%]
+tests/integration/connection/test_MqttClientPerformance.py::TestMqttClientPerformance::testPublishQoS0 
+-------------------------------- live log call ---------------------------------
+INFO     root:ConfigUtil.py:199 Loading default config: /home/ernest/piot/cda-python-components/config/PiotConfig.props
+INFO     root:ConfigUtil.py:222 Path found. Attempting config file load: /home/ernest/piot/cda-python-components/config/PiotConfig.props
+INFO     root:ConfigUtil.py:227 Config file successfully loaded from path: /home/ernest/piot/cda-python-components/config/PiotConfig.props
+INFO     root:ConfigUtil.py:44 Created instance of ConfigUtil: <programmingtheiot.common.ConfigUtil.ConfigUtil object at 0x713c4aa47cb0>
+INFO     root:DataUtil.py:25 Created DataUtil instance.
+INFO     programmingtheiot.cda.connection.MqttClientConnector:MqttClientConnector.py:96 Connection established to localhost:8883
+INFO     programmingtheiot.cda.connection.MqttClientConnector:MqttClientConnector.py:101 Disconnected from broker, rc=0
+INFO     root:test_MqttClientPerformance.py:70 Publish message - QoS 0 [10000]: 1486.02 ms
+PASSED                                                                   [ 50%]
+tests/integration/connection/test_MqttClientPerformance.py::TestMqttClientPerformance::testPublishQoS1 
+-------------------------------- live log call ---------------------------------
+INFO     root:DataUtil.py:25 Created DataUtil instance.
+INFO     programmingtheiot.cda.connection.MqttClientConnector:MqttClientConnector.py:96 Connection established to localhost:8883
+INFO     programmingtheiot.cda.connection.MqttClientConnector:MqttClientConnector.py:101 Disconnected from broker, rc=0
+INFO     root:test_MqttClientPerformance.py:70 Publish message - QoS 1 [10000]: 3180.37 ms
+PASSED                                                                   [ 75%]
+tests/integration/connection/test_MqttClientPerformance.py::TestMqttClientPerformance::testPublishQoS2 
+-------------------------------- live log call ---------------------------------
+INFO     root:DataUtil.py:25 Created DataUtil instance.
+INFO     programmingtheiot.cda.connection.MqttClientConnector:MqttClientConnector.py:96 Connection established to localhost:8883
+INFO     programmingtheiot.cda.connection.MqttClientConnector:MqttClientConnector.py:101 Disconnected from broker, rc=0
+INFO     root:test_MqttClientPerformance.py:70 Publish message - QoS 2 [10000]: 4812.02 ms
+PASSED                                                                   [100%]
+
+============================== 4 passed in 12.60s ==============================
