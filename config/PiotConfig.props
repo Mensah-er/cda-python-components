@@ -11,14 +11,16 @@
 # MQTT client configuration information
 #
 [Mqtt.GatewayService]
+#credFile       = ./cred/PiotMqttLocalCred.props
+#certFile       = ./cert/PiotMqttLocalCertFile.pem
 credFile       = ./cred/PiotMqttLocalCred.props
-certFile       = ./cert/PiotMqttLocalCertFile.pem
+certFile       = /home/ernest/piot/mosq_certs/ca.crt
 host           = localhost
 port           = 1883
 securePort     = 8883
 defaultQoS     = 0
 keepAlive      = 60
-enableAuth     = False
+enableAuth     = True
 enableCrypt    = True
 
 #
@@ -44,7 +46,7 @@ enableMqttClient = True
 enableCoapServer = False
 enableCoapClient = False
 enableSystemPerformance = True
-enableSensing    = False
+enableSensing    = True
 enableLogging    = True
 pollCycleSecs    = 5
 testGdaDataPath  = /tmp/gda-data

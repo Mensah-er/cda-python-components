@@ -1,4 +1,5 @@
 import logging
+from time import sleep
 
 from programmingtheiot.cda.connection.CoapClientConnector import CoapClientConnector
 from programmingtheiot.cda.connection.MqttClientConnector import MqttClientConnector
@@ -22,11 +23,12 @@ from programmingtheiot.data.DataUtil import DataUtil
 
 class DeviceDataManager(IDataMessageListener):
     """
-    DeviceDataManager class updated for Lab Module 05.
-    Adds MQTT integration according to professor's instructions.
+    DeviceDataManager class updated for PIOT-CDA-10-004.
+    Adds MQTT, CoAP integration, actuator callback handling,
+    and upstream transmission for sensor and system performance data.
     """
 
-    def __init__(self):
+    def __init__(self, disableAllComms: bool = False):
         self.configUtil = ConfigUtil()
 
         self.enableSystemPerf = self.configUtil.getBoolean(
@@ -86,11 +88,18 @@ class DeviceDataManager(IDataMessageListener):
             ConfigConst.TRIGGER_HVAC_TEMP_CEILING_KEY
         )
 
-        # --- Enable MQTT Client (Lab 05) ---
+        # --- Enable MQTT Client ---
         self.enableMqttClient = self.configUtil.getBoolean(
             ConfigConst.CONSTRAINED_DEVICE,
             ConfigConst.ENABLE_MQTT_CLIENT_KEY
         )
+
+        # Apply disableAllComms for testing
+        if disableAllComms:
+            self.enableMqttClient = False
+            self.coapClient = None
+            self.coapServer = None
+            logging.info("All communications disabled for testing")
 
         if self.enableMqttClient:
             logging.info("MQTT Client enabled. Initializing MqttClientConnector...")
@@ -111,7 +120,7 @@ class DeviceDataManager(IDataMessageListener):
         if self.sensorAdapterMgr:
             self.sensorAdapterMgr.startManager()
 
-        # Start MQTT client (Lab 05)
+        # Start MQTT client
         if self.mqttClient:
             self.mqttClient.connectClient()
             self.mqttClient.subscribeToTopic(ResourceNameEnum.CDA_ACTUATOR_CMD_RESOURCE)
@@ -127,7 +136,7 @@ class DeviceDataManager(IDataMessageListener):
         if self.sensorAdapterMgr:
             self.sensorAdapterMgr.stopManager()
 
-        # Stop MQTT client (Lab 05)
+        # Stop MQTT client
         if self.mqttClient:
             self.mqttClient.unsubscribeFromTopic(ResourceNameEnum.CDA_ACTUATOR_CMD_RESOURCE)
             self.mqttClient.disconnectClient()
@@ -138,7 +147,7 @@ class DeviceDataManager(IDataMessageListener):
     # IDataMessageListener callback methods
     # --------------------------------------------------------------------------
     def handleActuatorCommandMessage(self, data: ActuatorData = None) -> ActuatorData:
-        logging.info("Actuator data: " + str(data))
+        logging.info("Processing actuator command message: " + str(data))
 
         if data:
             return self.actuatorAdapterMgr.sendActuatorCommand(data)
@@ -153,7 +162,7 @@ class DeviceDataManager(IDataMessageListener):
 
             actuatorMsg = DataUtil().actuatorDataToJson(data)
             resourceName = ResourceNameEnum.CDA_ACTUATOR_RESPONSE_RESOURCE
-            self._handleUpstreamTransmission(resource=resourceName, msg=actuatorMsg)
+            self._handleUpstreamTransmission(resourceName=resourceName, msg=actuatorMsg)
             return True
         else:
             logging.warning("Incoming actuator response is invalid (null). Ignoring.")
@@ -167,7 +176,17 @@ class DeviceDataManager(IDataMessageListener):
     def handleSensorMessage(self, data: SensorData = None) -> bool:
         if data:
             logging.debug("Incoming sensor data received: " + str(data))
+
+            # Analyze sensor data
             self._handleSensorDataAnalysis(data)
+
+            # Convert to JSON and send upstream
+            jsonData = DataUtil().sensorDataToJson(data)
+            self._handleUpstreamTransmission(
+                resourceName=ResourceNameEnum.CDA_SENSOR_MSG_RESOURCE,
+                msg=jsonData
+            )
+
             return True
         else:
             logging.warning("Incoming sensor data is invalid (null). Ignoring.")
@@ -176,6 +195,14 @@ class DeviceDataManager(IDataMessageListener):
     def handleSystemPerformanceMessage(self, data: SystemPerformanceData = None) -> bool:
         if data:
             logging.debug("Incoming system performance data received: " + str(data))
+
+            # Convert to JSON and send upstream
+            jsonData = DataUtil().systemPerformanceDataToJson(data)
+            self._handleUpstreamTransmission(
+                resourceName=ResourceNameEnum.CDA_SYSTEM_PERF_MSG_RESOURCE,
+                msg=jsonData
+            )
+
             return True
         else:
             logging.warning("Incoming system performance data is invalid (null). Ignoring.")
@@ -208,9 +235,19 @@ class DeviceDataManager(IDataMessageListener):
     def _handleUpstreamTransmission(self, resourceName: ResourceNameEnum, msg: str):
         logging.debug(f"Upstream transmission called for resource {resourceName}: {msg}")
 
-        # Lab 05: Send message upstream via MQTT if enabled
+        # Send message via MQTT if enabled
         if self.mqttClient:
-            self.mqttClient.publishMessage(resourceName, msg, qos=ConfigConst.DEFAULT_QOS)
+            if self.mqttClient.publishMessage(resourceName, msg, qos=ConfigConst.DEFAULT_QOS):
+                logging.debug(f"Published incoming data to resource (MQTT): {resourceName}")
+            else:
+                logging.warning(f"Failed to publish incoming data to resource (MQTT): {resourceName}")
+
+        # Send message via CoAP if enabled
+        if self.coapClient:
+            if self.coapClient.sendPutRequest(resourceName, msg):
+                logging.debug(f"Put incoming message data to resource (CoAP): {resourceName}")
+            else:
+                logging.warning(f"Failed to put incoming message data to resource (CoAP): {resourceName}")
 
     # --------------------------------------------------------------------------
     # Cache retrieval methods

@@ -1,11 +1,9 @@
 #####
-# 
-# This class is part of the Programming the Internet of Things
-# project, and is available via the MIT License, which can be
-# found in the LICENSE file at the top level of this repository.
-# 
-# Copyright (c) 2020 - 2025 by Andrew D. King
-# 
+#
+# Integration test for DeviceDataManager
+# Programming the Internet of Things (MIT License)
+#
+#####
 
 import logging
 import unittest
@@ -15,48 +13,96 @@ from time import sleep
 import programmingtheiot.common.ConfigConst as ConfigConst
 
 from programmingtheiot.cda.app.DeviceDataManager import DeviceDataManager
-from programmingtheiot.data.ActuatorData import ActuatorData
+from programmingtheiot.data.SensorData import SensorData
+from programmingtheiot.data.SystemPerformanceData import SystemPerformanceData
+
 
 class DeviceDataManagerIntegrationTest(unittest.TestCase):
-	"""
-	This test case class contains very basic integration tests for
-	DeviceDataManager. It should not be considered complete,
-	but serve as a starting point for the student implementing
-	additional functionality within their Programming the IoT
-	environment.
-	
-	NOTE: This test MAY require the sense_emu_gui to be running,
-	depending on whether or not the 'enableEmulator' flag is
-	True within the ConstraineDevice section of PiotConfig.props.
-	If so, it must have access to the underlying libraries that
-	support the pisense module. On Windows, one way to do
-	this is by installing pisense and sense-emu within the
-	Bash on Ubuntu on Windows environment and then execute this
-	test case from the command line, as it will likely fail
-	if run within an IDE in native Windows.
-	
-	"""
-	
-	@classmethod
-	def setUpClass(self):
-		logging.basicConfig(format = '%(asctime)s:%(module)s:%(levelname)s:%(message)s', level = logging.DEBUG)
-		logging.info("Testing DeviceDataManager class...")
-		
-	def setUp(self):
-		pass
+    """
+    Integration test for DeviceDataManager.
 
-	def tearDown(self):
-		pass
+    This test verifies:
+    - Temperature, Humidity, and Pressure SensorData are handled and published.
+    - SystemPerformanceData is also sent to the GDA.
+    - MQTT traffic can be observed in GDA logs or mosquitto logs.
 
-	@unittest.skip("Ignore for now.")
-	def testDeviceDataMgrTimedIntegration(self):
-		ddMgr = DeviceDataManager()
-		ddMgr.startManager()
-		
-		sleep(60)
-		
-		ddMgr.stopManager()
-		
+    NOTE:
+        SenseHAT emulator must be running if ENABLE_EMULATOR_KEY=True
+        in PiotConfig.props.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        logging.basicConfig(
+            format='%(asctime)s:%(module)s:%(levelname)s:%(message)s',
+            level=logging.DEBUG
+        )
+        logging.info("=== DeviceDataManager Integration Test Starting ===")
+
+    def setUp(self):
+        self.ddMgr = DeviceDataManager()
+
+    def tearDown(self):
+        pass
+
+    def testDeviceDataMgrTimedIntegration(self):
+        logging.info("Starting DeviceDataManager...")
+        self.ddMgr.startManager()
+
+        # -------------------------------------------------------------------
+        # SEND TEMPERATURE SENSOR DATA
+        # -------------------------------------------------------------------
+        temp = SensorData()
+        temp.setName("TemperatureSensor")
+        temp.setTypeID(ConfigConst.TEMP_SENSOR_TYPE)
+        temp.setValue(30.5)  # Over typical threshold
+
+        logging.info("Sending Temperature SensorData: %s", temp)
+        self.ddMgr.handleSensorMessage(temp)
+
+        # -------------------------------------------------------------------
+        # SEND HUMIDITY SENSOR DATA
+        # -------------------------------------------------------------------
+        humidity = SensorData()
+        humidity.setName("HumiditySensor")
+        humidity.setTypeID(ConfigConst.HUMIDITY_SENSOR_TYPE)
+        humidity.setValue(55.2)  # Normal humidity example
+
+        logging.info("Sending Humidity SensorData: %s", humidity)
+        self.ddMgr.handleSensorMessage(humidity)
+
+        # -------------------------------------------------------------------
+        # SEND PRESSURE SENSOR DATA
+        # -------------------------------------------------------------------
+        pressure = SensorData()
+        pressure.setName("PressureSensor")
+        pressure.setTypeID(ConfigConst.PRESSURE_SENSOR_TYPE)
+        pressure.setValue(1008.4)  # Normal atmospheric pressure
+
+        logging.info("Sending Pressure SensorData: %s", pressure)
+        self.ddMgr.handleSensorMessage(pressure)
+
+        # -------------------------------------------------------------------
+        # SEND SYSTEM PERFORMANCE DATA
+        # -------------------------------------------------------------------
+        sysPerf = SystemPerformanceData()
+        sysPerf.setCpuUtilization(22.0)
+        sysPerf.setMemoryUtilization(48.0)
+
+        logging.info("Sending SystemPerformanceData: %s", sysPerf)
+        self.ddMgr.handleSystemPerformanceMessage(sysPerf)
+
+        # -------------------------------------------------------------------
+        # WAIT FOR MQTT TRAFFIC
+        # -------------------------------------------------------------------
+        logging.info("Waiting 30 seconds for MQTT traffic to complete...")
+        sleep(30)
+
+        logging.info("Stopping DeviceDataManager...")
+        self.ddMgr.stopManager()
+
+        logging.info("=== Integration Test Completed Successfully ===")
+
+
 if __name__ == "__main__":
-	unittest.main()
-	
+    unittest.main()
